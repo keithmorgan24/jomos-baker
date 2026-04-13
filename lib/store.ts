@@ -1,71 +1,66 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { INITIAL_MENU_ITEMS, MenuItem } from './menu'; // Import the seeding data
 
-// Improved Interface for Type Safety
-interface CartItem {
-  name: string;
-  price: string;
-  image: string;
-  category: string; 
+interface CartItem extends MenuItem {
   quantity: number;
 }
 
-interface CartState {
+interface JomoState {
+  menu: MenuItem[]; 
+  setMenu: (newMenu: MenuItem[]) => void;
+  updateMenuItem: (name: string, updatedItem: MenuItem) => void;
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>) => void; // Expect item without quantity first
+  addItem: (item: MenuItem) => void;
   removeItem: (name: string) => void;
   updateQuantity: (name: string, type: 'plus' | 'minus') => void;
-  clearCart: () => void; 
+  clearCart: () => void;
   toastMessage: string | null;
   showToast: (message: string) => void;
-  getTotalCount: () => number; // Added helper for the Navbar badge
+  getTotalCount: () => number;
 }
 
-export const useCart = create<CartState>((set, get) => ({
-  items: [],
-  toastMessage: null,
+export const useCart = create<JomoState>()(
+  persist(
+    (set, get) => ({
+      // Initialize with the data from menu.ts
+      menu: INITIAL_MENU_ITEMS,
 
-  // 1. Logic: Robust Add Item
-  addItem: (newItem) => set((state) => {
-    const existingItem = state.items.find(item => item.name === newItem.name);
-    
-    // Trigger toast notification on add
-    state.showToast(`${newItem.name} added to cart!`);
+      setMenu: (newMenu) => set({ menu: newMenu }),
 
-    if (existingItem) {
-      return {
-        items: state.items.map(item =>
-          item.name === newItem.name ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      };
-    }
-    // Ensure quantity is strictly 1 for new items
-    return { items: [...state.items, { ...newItem, quantity: 1 }] };
-  }),
+      updateMenuItem: (name, updatedItem) => set((state) => ({
+        menu: state.menu.map((item) => item.name === name ? updatedItem : item)
+      })),
 
-  removeItem: (name) => set((state) => ({
-    items: state.items.filter(item => item.name !== name)
-  })),
+      items: [],
+      toastMessage: null,
 
-  updateQuantity: (name, type) => set((state) => ({
-    items: state.items.map(item => {
-      if (item.name === name) {
-        const newQty = type === 'plus' ? item.quantity + 1 : item.quantity - 1;
-        return { ...item, quantity: Math.max(1, newQty) };
-      }
-      return item;
-    })
-  })),
+      addItem: (newItem) => {
+        const state = get();
+        const existingItem = state.items.find(item => item.name === newItem.name);
+        state.showToast(`${newItem.name} added!`);
+        if (existingItem) {
+          set({ items: state.items.map(i => i.name === newItem.name ? { ...i, quantity: i.quantity + 1 } : i) });
+        } else {
+          set({ items: [...state.items, { ...newItem, quantity: 1 }] });
+        }
+      },
 
-  clearCart: () => set({ items: [] }),
+      removeItem: (name) => set((state) => ({ items: state.items.filter(i => i.name !== name) })),
 
-  showToast: (message) => {
-    set({ toastMessage: message });
-    setTimeout(() => set({ toastMessage: null }), 3000);
-  },
+      updateQuantity: (name, type) => set((state) => ({
+        items: state.items.map(i => i.name === name ? { ...i, quantity: Math.max(1, type === 'plus' ? i.quantity + 1 : i.quantity - 1) } : i)
+      })),
 
-  // 2. Logic: Helper to sum up total quantity for the Navbar
-  getTotalCount: () => {
-    const items = get().items;
-    return items.reduce((total, item) => total + item.quantity, 0);
-  }
-}));
+      clearCart: () => set({ items: [] }),
+
+      showToast: (message) => {
+        set({ toastMessage: message });
+        setTimeout(() => set({ toastMessage: null }), 3000);
+      },
+
+      getTotalCount: () => get().items.reduce((total, item) => total + item.quantity, 0),
+    }),
+    { name: 'jomos-baker-storage' }
+  )
+);
