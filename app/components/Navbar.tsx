@@ -7,6 +7,7 @@ import { ShoppingCart, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // 1. Logic: Import the custom hook we built
 import { useCart } from '@/lib/store'; 
+import { ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
   onCartClick: () => void;
@@ -46,6 +47,15 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
           JOMO’S <span className="text-zinc-100 group-hover:text-amber-500">BAKER</span>
         </h1>
       </Link>
+
+      <Link
+  href="/admin/login"
+  onClick={() => setMobileMenuOpen(false)}
+  className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-700 hover:text-amber-500 transition-colors border-t border-zinc-900 pt-6"
+>
+  <ShieldCheck size={14} />
+  Terminal Access
+</Link>
 
       <div className="hidden md:flex items-center gap-10">
         {navLinks.map((link) => (
