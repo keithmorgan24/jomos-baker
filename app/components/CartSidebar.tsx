@@ -2,24 +2,24 @@
 
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react';
-import { useCart } from '../../lib/store';
+import { X, ShoppingBag, Trash2, Plus, Minus, RotateCcw } from 'lucide-react';
+import { useCart } from '@/lib/store'; // Adjusted path to use alias
 
 export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { items, removeItem, updateQuantity } = useCart();
+  // 1. Logic: Added clearCart to the destructuring
+  const { items, removeItem, updateQuantity, clearCart } = useCart();
   const router = useRouter();
 
-  // 1. Navigation Logic
   const handleCheckout = () => {
     onClose(); 
     router.push('/checkout'); 
   };
 
-  // 2. Calculation Logic
   const itemCount = items.reduce((total: number, item: any) => total + item.quantity, 0);
 
+  // 2. Calculation Logic: Updated to handle "KSh" instead of "$"
   const subtotal = items.reduce((acc: number, item: any) => {
-    const price = parseFloat(item.price.replace('$', ''));
+    const price = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
     return acc + (price * item.quantity);
   }, 0);
 
@@ -27,27 +27,25 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110]"
           />
 
-          {/* Sidebar Panel */}
           <motion.div 
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-zinc-950 border-l border-zinc-800 z-[70] p-8 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-zinc-950 border-l border-zinc-800 z-[120] p-8 flex flex-col shadow-2xl"
           >
             {/* Header */}
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-bold flex items-center gap-2 text-zinc-100">
-                Your Order ({itemCount}) <ShoppingBag className="text-amber-500 w-6 h-6" />
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-2 text-zinc-100">
+                Your Order <span className="text-amber-500">({itemCount})</span>
               </h2>
               <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
                 <X className="w-6 h-6" />
@@ -65,16 +63,15 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
                   <div className="w-24 h-24 bg-zinc-900/50 rounded-full flex items-center justify-center mb-6 border border-zinc-800 shadow-inner">
                     <ShoppingBag className="w-10 h-10 text-zinc-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-zinc-100 mb-2 italic">Your cart is empty</h3>
+                  <h3 className="text-2xl font-black italic text-zinc-100 mb-2 uppercase">Your bag is empty</h3>
                   <p className="text-zinc-500 mb-10 max-w-[260px] leading-relaxed">
                     It seems you haven't discovered our signature treats yet.
                   </p>
                   <button 
                     onClick={onClose}
-                    className="group relative flex items-center gap-2 px-8 py-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl hover:bg-amber-500 hover:text-white transition-all active:scale-95 shadow-xl shadow-white/5"
+                    className="group flex items-center gap-2 px-8 py-4 bg-amber-500 text-zinc-950 font-black italic uppercase rounded-[2rem] hover:bg-zinc-100 transition-all active:scale-95 shadow-xl shadow-amber-500/10"
                   >
                     <span>Explore Menu</span>
-                    <div className="w-2 h-2 rounded-full bg-amber-500 group-hover:bg-white transition-colors" />
                   </button>
                 </motion.div>
               ) : (
@@ -82,30 +79,30 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
                   <motion.div 
                     layout
                     key={item.name} 
-                    className="flex gap-4 items-center bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50"
+                    className="flex gap-4 items-center bg-zinc-900/40 p-4 rounded-[2rem] border border-zinc-800/50"
                   >
                     <img 
                       src={item.image} 
-                      className="w-20 h-20 object-cover rounded-xl border border-zinc-800" 
+                      className="w-20 h-20 object-cover rounded-2xl border border-zinc-800" 
                       alt={item.name} 
                     />
                     <div className="flex-1">
-                      <h4 className="font-bold text-zinc-100">{item.name}</h4>
-                      <p className="text-amber-500 text-sm mb-3">{item.price}</p>
+                      <h4 className="font-bold text-zinc-100 uppercase text-sm tracking-widest">{item.name}</h4>
+                      <p className="text-amber-500 font-mono text-xs mt-1">{item.price}</p>
                       
-                      <div className="flex items-center gap-3 bg-zinc-800/80 w-fit rounded-lg p-1 border border-zinc-700/50">
+                      <div className="flex items-center gap-3 bg-zinc-800/80 w-fit rounded-full p-1 border border-zinc-700/50 mt-3">
                         <button 
                           onClick={() => updateQuantity(item.name, 'minus')}
-                          className="p-1 hover:bg-zinc-700 rounded transition-colors text-zinc-400 hover:text-amber-500"
+                          className="p-1 hover:bg-zinc-700 rounded-full transition-colors text-zinc-400"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-sm font-mono font-bold min-w-[24px] text-center text-zinc-100">
+                        <span className="text-xs font-black min-w-[20px] text-center text-zinc-100">
                           {item.quantity}
                         </span>
                         <button 
                           onClick={() => updateQuantity(item.name, 'plus')}
-                          className="p-1 hover:bg-zinc-700 rounded transition-colors text-zinc-400 hover:text-amber-500"
+                          className="p-1 hover:bg-zinc-700 rounded-full transition-colors text-zinc-400"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -113,7 +110,7 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
                     </div>
                     <button 
                       onClick={() => removeItem(item.name)}
-                      className="p-2 text-zinc-600 hover:text-red-400 transition-colors"
+                      className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -124,16 +121,26 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
 
             {/* Footer / Checkout */}
             {items.length > 0 && (
-              <div className="border-t border-zinc-800 pt-6 mt-6">
-                <div className="flex justify-between items-center mb-6 px-1">
-                  <span className="text-zinc-400">Subtotal</span>
-                  <span className="text-xl font-bold text-zinc-100">
-                    ${subtotal.toFixed(2)}
+              <div className="border-t border-zinc-900 pt-6 mt-6 space-y-4">
+                {/* CLEAR CART BUTTON */}
+                <button 
+                  onClick={clearCart}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-black italic uppercase tracking-[0.2em] text-zinc-500 hover:text-red-500 border border-dashed border-zinc-800 rounded-2xl transition-all"
+                >
+                  <RotateCcw size={12} />
+                  Clear Entire Bag
+                </button>
+
+                <div className="flex justify-between items-center mb-2 px-1">
+                  <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
+                  <span className="text-2xl font-black italic text-zinc-100">
+                    KSh {subtotal.toLocaleString()}
                   </span>
                 </div>
+                
                 <button 
                   onClick={handleCheckout}
-                  className="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl hover:bg-amber-500 transition-all shadow-lg shadow-amber-900/20 active:scale-[0.98]"
+                  className="w-full py-5 bg-amber-500 text-zinc-950 font-black italic uppercase tracking-tighter rounded-[2.5rem] hover:bg-white transition-all shadow-xl shadow-amber-500/10 active:scale-95"
                 >
                   CHECKOUT NOW
                 </button>

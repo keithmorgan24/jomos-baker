@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+// Improved Interface for Type Safety
 interface CartItem {
   name: string;
   price: string;
@@ -10,21 +11,26 @@ interface CartItem {
 
 interface CartState {
   items: CartItem[];
-  addItem: (item: any) => void;
+  addItem: (item: Omit<CartItem, 'quantity'>) => void; // Expect item without quantity first
   removeItem: (name: string) => void;
   updateQuantity: (name: string, type: 'plus' | 'minus') => void;
   clearCart: () => void; 
   toastMessage: string | null;
   showToast: (message: string) => void;
+  getTotalCount: () => number; // Added helper for the Navbar badge
 }
 
-export const useCart = create<CartState>((set) => ({
+export const useCart = create<CartState>((set, get) => ({
   items: [],
   toastMessage: null,
 
-  // 1. Logic: Adds a new item or increments quantity if already exists
+  // 1. Logic: Robust Add Item
   addItem: (newItem) => set((state) => {
     const existingItem = state.items.find(item => item.name === newItem.name);
+    
+    // Trigger toast notification on add
+    state.showToast(`${newItem.name} added to cart!`);
+
     if (existingItem) {
       return {
         items: state.items.map(item =>
@@ -32,15 +38,14 @@ export const useCart = create<CartState>((set) => ({
         )
       };
     }
+    // Ensure quantity is strictly 1 for new items
     return { items: [...state.items, { ...newItem, quantity: 1 }] };
   }),
 
-  // 2. Logic: Removes an item entirely from the cart
   removeItem: (name) => set((state) => ({
     items: state.items.filter(item => item.name !== name)
   })),
 
-  // 3. Logic: Safely increments or decrements quantity (minimum 1)
   updateQuantity: (name, type) => set((state) => ({
     items: state.items.map(item => {
       if (item.name === name) {
@@ -51,12 +56,16 @@ export const useCart = create<CartState>((set) => ({
     })
   })),
 
-  // 4. Logic: Completely resets the cart
   clearCart: () => set({ items: [] }),
 
-  // 5. Logic: Handles global notifications with auto-hide
   showToast: (message) => {
     set({ toastMessage: message });
     setTimeout(() => set({ toastMessage: null }), 3000);
   },
+
+  // 2. Logic: Helper to sum up total quantity for the Navbar
+  getTotalCount: () => {
+    const items = get().items;
+    return items.reduce((total, item) => total + item.quantity, 0);
+  }
 }));
