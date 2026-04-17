@@ -1,55 +1,77 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { INITIAL_MENU_ITEMS, MenuItem } from './menu'; // Import the seeding data
+import { INITIAL_MENU_ITEMS } from './menu';
+
+export interface MenuItem {
+  _id: string;
+  name: string;
+  price: number;
+  category: string;
+  image: string;
+  isAvailable?: boolean; // New field to track availability
+}
 
 interface CartItem extends MenuItem {
   quantity: number;
 }
 
 interface JomoState {
-  menu: MenuItem[]; 
-  setMenu: (newMenu: MenuItem[]) => void;
-  updateMenuItem: (name: string, updatedItem: MenuItem) => void;
+  menu: MenuItem[];
   items: CartItem[];
+  setMenu: (newMenu: MenuItem[]) => void;
   addItem: (item: MenuItem) => void;
-  removeItem: (name: string) => void;
-  updateQuantity: (name: string, type: 'plus' | 'minus') => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, type: 'plus' | 'minus') => void;
   clearCart: () => void;
   toastMessage: string | null;
   showToast: (message: string) => void;
   getTotalCount: () => number;
+  _hasHydrated: boolean; // New: Hydration tracker
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useCart = create<JomoState>()(
   persist(
     (set, get) => ({
-      // Initialize with the data from menu.ts
-      menu: INITIAL_MENU_ITEMS,
+      menu: (INITIAL_MENU_ITEMS as unknown) as MenuItem[],
+      items: [],
+      toastMessage: null,
+      _hasHydrated: false, // Initial state for hydration
+
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       setMenu: (newMenu) => set({ menu: newMenu }),
 
-      updateMenuItem: (name, updatedItem) => set((state) => ({
-        menu: state.menu.map((item) => item.name === name ? updatedItem : item)
-      })),
-
-      items: [],
-      toastMessage: null,
-
       addItem: (newItem) => {
-        const state = get();
-        const existingItem = state.items.find(item => item.name === newItem.name);
-        state.showToast(`${newItem.name} added!`);
+        const { items, showToast } = get();
+        // Strict ID check for reliability
+        const existingItem = items.find(item => item._id === newItem._id);
+        
+        showToast(`${newItem.name} added!`);
+        
         if (existingItem) {
-          set({ items: state.items.map(i => i.name === newItem.name ? { ...i, quantity: i.quantity + 1 } : i) });
+          set({ 
+            items: items.map(i => 
+              i._id === newItem._id ? { ...i, quantity: i.quantity + 1 } : i
+            ) 
+          });
         } else {
-          set({ items: [...state.items, { ...newItem, quantity: 1 }] });
+          // Force price to Number to prevent NaN in Sidebar
+          const safePrice = typeof newItem.price === 'string' ? parseFloat(newItem.price) : newItem.price;
+          set({ items: [...items, { ...newItem, price: safePrice, quantity: 1 }] });
         }
       },
 
-      removeItem: (name) => set((state) => ({ items: state.items.filter(i => i.name !== name) })),
+      removeItem: (id) => set((state) => ({ 
+        items: state.items.filter(i => i._id !== id) 
+      })),
 
-      updateQuantity: (name, type) => set((state) => ({
-        items: state.items.map(i => i.name === name ? { ...i, quantity: Math.max(1, type === 'plus' ? i.quantity + 1 : i.quantity - 1) } : i)
+      updateQuantity: (id, type) => set((state) => ({
+        items: state.items.map(i => 
+          i._id === id 
+          ? { ...i, quantity: Math.max(1, type === 'plus' ? i.quantity + 1 : i.quantity - 1) } 
+          : i
+        )
       })),
 
       clearCart: () => set({ items: [] }),
@@ -61,6 +83,11 @@ export const useCart = create<JomoState>()(
 
       getTotalCount: () => get().items.reduce((total, item) => total + item.quantity, 0),
     }),
-    { name: 'jomos-baker-storage' }
+    { 
+      name: 'jomos-baker-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true); // Mark as hydrated when storage is loaded
+      }
+    }
   )
 );

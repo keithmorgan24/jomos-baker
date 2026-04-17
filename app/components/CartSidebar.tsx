@@ -3,10 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Trash2, Plus, Minus, RotateCcw } from 'lucide-react';
-import { useCart } from '@/lib/store'; // Adjusted path to use alias
+import { useCart } from '@/lib/store';
 
 export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  // 1. Logic: Added clearCart to the destructuring
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const router = useRouter();
 
@@ -15,11 +14,16 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
     router.push('/checkout'); 
   };
 
-  const itemCount = items.reduce((total: number, item: any) => total + item.quantity, 0);
+  const itemCount = items.reduce((total, item) => total + item.quantity, 0);
 
-  // 2. Calculation Logic: Updated to handle "KSh" instead of "$"
-  const subtotal = items.reduce((acc: number, item: any) => {
-    const price = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+  // FIXED CALCULATION LOGIC: Handles both String and Number types
+  const subtotal = items.reduce((acc, item) => {
+    // 1. Force the price to a string so we can safely use .replace()
+    const rawPrice = String(item.price);
+    
+    // 2. Strip non-numeric characters (KSh, commas, etc.) and convert to float
+    const price = parseFloat(rawPrice.replace(/[^0-9.]/g, '')) || 0;
+    
     return acc + (price * item.quantity);
   }, 0);
 
@@ -65,7 +69,7 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
                   </div>
                   <h3 className="text-2xl font-black italic text-zinc-100 mb-2 uppercase">Your bag is empty</h3>
                   <p className="text-zinc-500 mb-10 max-w-[260px] leading-relaxed">
-                    It seems you haven't discovered our signature treats yet.
+                    It seems you haven&apos;t discovered our signature treats yet.
                   </p>
                   <button 
                     onClick={onClose}
@@ -88,7 +92,9 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
                     />
                     <div className="flex-1">
                       <h4 className="font-bold text-zinc-100 uppercase text-sm tracking-widest">{item.name}</h4>
-                      <p className="text-amber-500 font-mono text-xs mt-1">{item.price}</p>
+                      <p className="text-amber-500 font-mono text-xs mt-1">
+  KSh {Number(item.price).toLocaleString()}
+</p>
                       
                       <div className="flex items-center gap-3 bg-zinc-800/80 w-fit rounded-full p-1 border border-zinc-700/50 mt-3">
                         <button 
@@ -122,7 +128,6 @@ export default function CartSidebar({ isOpen, onClose }: { isOpen: boolean, onCl
             {/* Footer / Checkout */}
             {items.length > 0 && (
               <div className="border-t border-zinc-900 pt-6 mt-6 space-y-4">
-                {/* CLEAR CART BUTTON */}
                 <button 
                   onClick={clearCart}
                   className="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-black italic uppercase tracking-[0.2em] text-zinc-500 hover:text-red-500 border border-dashed border-zinc-800 rounded-2xl transition-all"

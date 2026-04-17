@@ -80,7 +80,7 @@ export default function ResetPassword() {
             </div>
             <h2 className="text-2xl font-black italic text-zinc-100 mb-4 uppercase">Check Your Inbox</h2>
             <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
-              We've sent a secure password reset link to <br/>
+              We&apos;ve sent a secure password reset link to <br/>
               <span className="text-zinc-200 font-bold">{email}</span>
             </p>
             <Link 

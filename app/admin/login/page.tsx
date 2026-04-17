@@ -14,19 +14,31 @@ export default function AdminLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPending(true);
+    setError(false);
 
-    // Artificial delay for that "Checking Database" feel
-    setTimeout(() => {
-      if (password === 'JomoAdmin2026') {
-        localStorage.setItem('jb_admin_auth', 'true');
-        router.push('/admin');
+    try {
+      // Calling the synchronized route
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (res.ok) {
+        // Successful login - Cookie is set by server
+        router.push('/admin/menu');
       } else {
+        // Failed login (401 or 404)
         setError(true);
         setIsPending(false);
-        setPassword(''); // Clear on fail
-        setTimeout(() => setError(false), 2000);
+        setPassword('');
+        setTimeout(() => setError(false), 3000);
       }
-    }, 800);
+    } catch (err) {
+      console.error("Auth System Error:", err);
+      setError(true);
+      setIsPending(false);
+    }
   };
 
   return (

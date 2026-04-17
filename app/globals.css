@@ -1,20 +1,34 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
+/* 🚀 ADDING THE PULSE ANIMATION HERE */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* This tells Tailwind about our new "wa-pulse" animation */
+  --animate-wa-pulse: wa-pulse 2.5s infinite ease-out;
+
+  @keyframes wa-pulse {
+    0% { transform: scale(1); opacity: 0.4; }
+    70% { transform: scale(1.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 0.4; }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0a0a0a; /* This matches your high-end dark theme */
     --foreground: #ededed;
   }
 }

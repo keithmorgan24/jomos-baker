@@ -1,13 +1,11 @@
-// components/Navbar.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Menu, X } from 'lucide-react';
+import { usePathname } from 'next/navigation'; // Added for route detection
+import { ShoppingCart, Menu, X, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-// 1. Logic: Import the custom hook we built
 import { useCart } from '@/lib/store'; 
-import { ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
   onCartClick: () => void;
@@ -16,18 +14,31 @@ interface NavbarProps {
 const Navbar = ({ onCartClick }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // 2. Logic: Extract the total count from the global store
-  // This value will now update automatically whenever the cart changes
+  const [mounted, setMounted] = useState(false); // Added to prevent hydration errors
+  
+  const pathname = usePathname();
   const totalItems = useCart((state) => state.items.reduce((acc, item) => acc + item.quantity, 0));
 
+  // --- HYDRATION & SCROLL SAFETY ---
   useEffect(() => {
+    setMounted(true);
+    
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
-    window.addEventListener('scroll', handleScroll);
+
+    // Initial check on mount
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // --- HIDE LOGIC FOR DRIVER/ADMIN ---
+  // This solves the double-navbar bug shown in your screenshots
+  const isSpecialRoute = pathname?.startsWith('/driver') || pathname?.startsWith('/admin');
+
+  if (!mounted || isSpecialRoute) return null;
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -42,21 +53,14 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
         isScrolled ? 'h-20 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-900' : 'h-24 bg-transparent'
       } flex items-center justify-between`}
     >
+      {/* --- LOGO --- */}
       <Link href="/" className="group">
         <h1 className="text-2xl font-black italic uppercase tracking-tighter text-amber-500 group-hover:text-zinc-100 transition-colors">
           JOMO’S <span className="text-zinc-100 group-hover:text-amber-500">BAKER</span>
         </h1>
       </Link>
 
-      <Link
-  href="/admin/login"
-  onClick={() => setMobileMenuOpen(false)}
-  className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-700 hover:text-amber-500 transition-colors border-t border-zinc-900 pt-6"
->
-  <ShieldCheck size={14} />
-  Terminal Access
-</Link>
-
+      {/* --- DESKTOP NAV --- */}
       <div className="hidden md:flex items-center gap-10">
         {navLinks.map((link) => (
           <Link
@@ -67,8 +71,17 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
             {link.name}
           </Link>
         ))}
+        
+        <Link
+          href="/admin/login"
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-amber-500 transition-colors border-l border-zinc-800 pl-6 ml-2"
+        >
+          <ShieldCheck size={14} />
+          Terminal Access
+        </Link>
       </div>
 
+      {/* --- ACTIONS --- */}
       <div className="flex items-center gap-6">
         <button 
           onClick={onCartClick}
@@ -76,7 +89,6 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
         >
           <ShoppingCart size={22} strokeWidth={2.5} />
           
-          {/* 3. Logic: Only show the badge if items are > 0, and use the dynamic count */}
           {totalItems > 0 && (
             <motion.span 
               initial={{ scale: 0.5, opacity: 0 }}
@@ -95,6 +107,7 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
           Order Now
         </Link>
 
+        {/* Mobile Toggle */}
         <button 
           className="md:hidden text-zinc-100"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -103,6 +116,7 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
         </button>
       </div>
 
+      {/* --- MOBILE MENU --- */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -121,6 +135,15 @@ const Navbar = ({ onCartClick }: NavbarProps) => {
                 {link.name}
               </Link>
             ))}
+
+            <Link
+              href="/admin/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-700 hover:text-amber-500 transition-colors border-t border-zinc-900 pt-6"
+            >
+              <ShieldCheck size={14} />
+              Terminal Access
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>
