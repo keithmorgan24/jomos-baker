@@ -3,28 +3,31 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface AdminGuardProps {
-  children: ReactNode;
-}
-
-export default function AdminGuard({ children }: AdminGuardProps) {
+export default function AdminGuard({ children }: { children: ReactNode }) {
   const [authorized, setAuthorized] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Retrieval logic from your production-ready login
-    const role = localStorage.getItem('userRole'); 
-    
-    if (role !== 'admin') {
-      router.push('/driver/login'); 
-    } else {
-      setAuthorized(true);
+    async function validate() {
+      try {
+        const res = await fetch('/api/admin/verify');
+        if (res.ok) {
+          setAuthorized(true);
+        } else {
+          router.push('/admin/login');
+        }
+      } catch {
+        router.push('/admin/login');
+      } finally {
+        setLoading(false);
+      }
     }
+    validate();
   }, [router]);
 
-  // Prevents the admin dashboard from "flickering" 
-  // on the screen for a driver
-  if (!authorized) return null; 
+  if (loading) return <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">Checking Credentials...</div>;
+  if (!authorized) return null;
 
   return <>{children}</>;
 }

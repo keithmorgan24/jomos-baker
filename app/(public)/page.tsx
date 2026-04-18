@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Hero from './components/Hero';
-import { MenuItem } from '../lib/menu';
-import { useCart } from '../lib/store';
+import Hero from '../components/Hero';
+import { MenuItem } from '../../lib/menu';
+import { useCart } from '../../lib/store';
 
 export default function Home() {
   const menu = useCart((state) => state.menu);

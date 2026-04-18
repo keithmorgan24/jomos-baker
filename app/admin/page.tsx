@@ -68,17 +68,16 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-12">
       {/* Header */}
-      <header className="flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black italic tracking-tight text-zinc-100 uppercase">Dashboard</h1>
-          <p className="text-zinc-500 mt-2 font-medium">System operational. All nodes synced.</p>
-        </div>
-        <div className="text-right hidden md:block">
-          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Current Session</p>
-          <p className="text-zinc-100 font-mono text-sm">2026.04.13 // 20:15</p>
-        </div>
-      </header>
-
+<header className="flex justify-between items-end">
+  <div>
+    <h1 className="text-4xl font-black italic tracking-tight text-zinc-100 uppercase">Dashboard</h1>
+    <p className="text-zinc-500 mt-2 font-medium flex items-center gap-2">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      System operational. 
+    </p>
+  </div>
+  
+</header>
       {/* Stat Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {statCards.map((stat, i) => (

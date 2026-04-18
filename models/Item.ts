@@ -1,32 +1,38 @@
 import { Schema, model, models } from 'mongoose';
 
-// The Schema defines the structure of the document
 const ItemSchema = new Schema({
   name: { 
     type: String, 
     required: [true, 'Dish name is required'],
-    trim: true 
+    trim: true,
+    index: true  // ✅ Speeds up name searches
   },
   price: { 
-    type: Number, // We store as a Number for math, format as KSh in UI
-    required: [true, 'Price is required'] 
+    type: Number,
+    required: [true, 'Price is required'],
+    index: true  // ✅ Speeds up price-range filtering
   },
   category: { 
     type: String, 
-    required: [true, 'Category is required'] 
+    required: [true, 'Category is required'],
+    index: true  // ✅ Essential for the "Pastries/Meals" filter
   },
   image: { 
-    type: String, // Base64 string from your camera or a URL
+    type: String,
     required: false
   },
+  isAvailable: {
+    type: Boolean,
+    default: true,
+    index: true  // ✅ CRITICAL: Used on every public GET request
+  }
 }, {
-  // This automatically manages 'createdAt' and 'updatedAt' fields
-  timestamps: true, 
+  timestamps: true,
 });
 
-// IMPORTANT NEXT.JS PATTERN:
-// Models are cleared on every hot-reload in development. 
-// This line checks if the model exists before creating a new one.
+// ✅ Compound index: Speeds up the exact query used in your public API
+ItemSchema.index({ isAvailable: 1, category: 1 });
+
 const Item = models.Item || model('Item', ItemSchema);
 
 export default Item;

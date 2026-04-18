@@ -17,7 +17,6 @@ export default function AdminLogin() {
     setError(false);
 
     try {
-      // Calling the synchronized route
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,10 +24,10 @@ export default function AdminLogin() {
       });
 
       if (res.ok) {
-        // Successful login - Cookie is set by server
-        router.push('/admin/menu');
+        // The API sets the cookie. We refresh to let the proxy see it.
+        router.refresh();
+        router.push('/admin'); 
       } else {
-        // Failed login (401 or 404)
         setError(true);
         setIsPending(false);
         setPassword('');
@@ -58,14 +57,19 @@ export default function AdminLogin() {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="relative group">
-            <Lock className={`absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${error ? 'text-red-500' : 'text-zinc-700 group-focus-within:text-amber-500'}`} />
+            <Lock className={`absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
+              error ? 'text-red-500' : 'text-zinc-700 group-focus-within:text-amber-500'
+            }`} />
             <input 
               type="password" 
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="ENTER ACCESS KEY"
-              className={`w-full bg-zinc-950 border ${error ? 'border-red-500 animate-shake' : 'border-zinc-800'} p-5 pl-14 rounded-2xl focus:border-amber-500 outline-none text-zinc-100 transition-all font-mono tracking-widest text-sm`}
+              autoComplete="current-password"
+              className={`w-full bg-zinc-950 border ${
+                error ? 'border-red-500 animate-bounce' : 'border-zinc-800'
+              } p-5 pl-14 rounded-2xl focus:border-amber-500 outline-none text-zinc-100 transition-all font-mono tracking-widest text-sm`}
             />
           </div>
           

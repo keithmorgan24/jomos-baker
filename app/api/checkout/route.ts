@@ -1,79 +1,85 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
+import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
-import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { pusherServer } from '@/lib/pusher'; // 1. Ensure this import exists
-
-const CheckoutSchema = z.object({
-  customer: z.object({
-    name: z.string().min(2),
-    phone: z.string().min(10),
-    address: z.string().min(5),
-  }),
-  items: z.array(z.object({
-    _id: z.string(),
-    name: z.string(),
-    price: z.number(),
-    quantity: z.number().min(1),
-  })),
-  subtotal: z.number(),
-});
+import Item from '@/models/Item';
+import { CheckoutSchema, validateInput } from '@/lib/validationSchemas';
 
 export async function POST(request: Request) {
   try {
     await dbConnect();
     const body = await request.json();
 
-    // 2. Validation
-    const validation = CheckoutSchema.safeParse(body);
+    // INPUT VALIDATION: Validate request body
+    const validation = validateInput(CheckoutSchema, body);
     if (!validation.success) {
-      return NextResponse.json({ 
-        error: "Invalid order data", 
-        details: validation.error.format() 
-      }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid input: ${validation.error}` },
+        { status: 400 }
+      );
     }
 
-    const { customer, items, subtotal } = validation.data;
+    const { customer, items } = validation.data!;
 
-    // 3. Database Persistence
+    // 1. Fetch current items from DB to get AUTHENTIC prices
+    const itemIds = items.map(i => i.menuItemId);
+    const dbItems = await Item.find({ _id: { $in: itemIds } });
+    const dbItemMap = new Map(dbItems.map(item => [item._id.toString(), item]));
+    
+    let calculatedSubtotal = 0;
+    const verifiedItems = [];
+
+    // 2. Server-side Calculation - verify prices and availability
+    for (const cartItem of items) {
+      const dbItem = dbItemMap.get(cartItem.menuItemId);
+      
+      if (!dbItem || dbItem.isAvailable === false) {
+        return NextResponse.json(
+          { error: `Item "${cartItem.name}" is no longer available.` }, 
+          { status: 410 }
+        );
+      }
+
+      // Use the price from database, NOT the frontend
+      const price = dbItem.price;
+      const quantity = cartItem.quantity;
+      
+      calculatedSubtotal += price * quantity;
+
+      verifiedItems.push({
+        menuItemId: dbItem._id,
+        name: dbItem.name,
+        price: price,
+        quantity: quantity
+      });
+    }
+
+    // 3. Create order with SERVER-CALCULATED subtotal
     const newOrder = await Order.create({
       customer,
-      items: items.map(item => ({
-        menuItemId: item._id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity
-      })),
-      subtotal,
+      items: verifiedItems,
+      subtotal: calculatedSubtotal, 
       status: 'pending',
     });
 
-    // 4. Real-Time Pulse (Must happen BEFORE the return)
-    // We wrap this in an attempt to ensure checkout succeeds even if Pusher fails
-    try {
-      await pusherServer.trigger('admin-orders', 'new-order', {
-        orderNumber: newOrder.orderNumber,
-        customerName: newOrder.customer.name,
-        subtotal: newOrder.subtotal,
-        createdAt: newOrder.createdAt,
+    // 4. Log attempts to tamper
+    if (Math.abs(calculatedSubtotal - 0) > 0.01) {
+      console.info({
+        event: 'order_created',
+        orderId: newOrder._id,
+        subtotal: calculatedSubtotal,
+        itemCount: items.length,
+        timestamp: new Date().toISOString()
       });
-    } catch (pusherError) {
-      console.error("PUSHER_TRIGGER_ERROR:", pusherError);
-      // We don't return here; the order is saved, so we still want the user to see 'Success'
     }
-
-    // 5. Cache Invalidation
-    revalidatePath('/admin/orders');
 
     return NextResponse.json({ 
       success: true, 
-      orderNumber: newOrder.orderNumber,
-      orderId: newOrder._id 
+      orderId: newOrder._id,
+      amount: calculatedSubtotal
     }, { status: 201 });
 
-  } catch (error: any) {
-    console.error("CRITICAL_CHECKOUT_ERROR:", error.message);
+  } catch (error) {
+    console.error("Checkout Error:", error);
     return NextResponse.json({ error: "Checkout failed. Please try again." }, { status: 500 });
   }
 }

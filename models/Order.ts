@@ -1,10 +1,17 @@
 import mongoose, { Schema, model, models } from 'mongoose';
+import { randomUUID } from 'crypto';
 
 const OrderSchema = new Schema({
   orderNumber: { 
     type: String, 
-    unique: true, 
-    default: () => `JB-${Math.floor(1000 + Math.random() * 9000)}` 
+    unique: true,
+    required: true,
+    index: true,
+    default: () => {
+      const timestamp = Date.now();
+      const uuid = randomUUID().split('-')[0];
+      return `JB-${timestamp}-${uuid}`;
+    }
   },
   customer: {
     name: { type: String, required: true },
